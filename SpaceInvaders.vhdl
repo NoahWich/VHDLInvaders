@@ -64,18 +64,18 @@ constant rst : std_logic := '0';
 signal mclk_sig : std_logic ;
 signal internal_counter : integer := 1;
 signal slow_clock : std_logic := '0';
+signal Hslow_clock : std_logic := '0';
+signal Qslow_clock : std_logic := '0';
 constant radius : integer := 15;
 signal middleH : integer := 640;                -- Will be Incremented by 10 each 1/4 Slow Clock
 signal middleV : integer := 360;                -- "
+signal InvaderDirection : std_logic := '1';
 
-type state_shield1 is (five, four, three, two, one, zero);                                 
-signal state1 : state_shield1 := five;
-type state_shield2 is (five, four, three, two, one, zero);                                 
-signal state2 : state_shield2 := five;
-type state_shield3 is (five, four, three, two, one, zero);                                 
-signal state3 : state_shield3 := five;
-type state_shield4 is (five, four, three, two, one, zero);                                 
-signal state4 : state_shield4 := five;
+type state_shield is (five, four, three, two, one, zero);                                 
+signal shield1 : state_shield := five;                                
+signal shield2 : state_shield := five;                               
+signal shield3 : state_shield := five;                                 
+signal shield4 : state_shield := five;
 
 
 begin
@@ -127,7 +127,7 @@ hdmi_controller : entity work.rgb2dvi
 active <= not(bgnd_hblnk) and not(bgnd_vblnk); 
 rgb_data <= red_data & green_data & blue_data;	 
 
-count_proc : process(pclk)                                          -- Slow Clock Pulse Process
+count_proc : process(pclk)                                          -- Slow Clock Pulse Process TODO DEFINITELY CAN CLEAN UP THE IF STATEMENTS
 begin
     if rising_edge(pclk) then
         -- Increment your internal counter
@@ -139,6 +139,34 @@ begin
         else
             -- Set slow_clock Low 
             slow_clock <= '0';
+        end if;
+        
+        if internal_counter = 37125000 then         -- 1/2 Slow Clock, used for Invader Movement
+            Hslow_clock <= '1';
+            
+            if (middleH + 150) >= 1250 then
+                InvaderDirection <= '0';            -- Move Left
+                middleV <= middleV - 30;            -- Move the Invaders down one spot on boarder contact
+            elsif (middleH - 150) <= 30 then
+                InvaderDirection <= '1';            -- Move Right
+                middleV <= middleV - 30;            -- Move the Invaders down one spot on boarder contact
+            end if;
+            
+            if InvaderDirection = '0' then
+                middleH <= middleH - 10;            -- Move Invaders Right by 10
+            elsif InvaderDirection = '1' then
+                middleH <= middleH + 10;            -- Move Invaders Left by 10
+            end if;
+        else
+            -- Set slow_clock Low 
+            Hslow_clock <= '0';
+        end if;
+        
+        if internal_counter = 18562500 then         -- 1/4 Slow Clock, used for Player Movement   
+            Qslow_clock <= '1';
+        else
+            -- Set slow_clock Low 
+            Qslow_clock <= '0';
         end if;
     end if;
 end process count_proc;
@@ -153,6 +181,8 @@ end process;
 
 process(hcount, vcount)                                             -- Draws out all of our invaders. 
 begin
+
+      -- First Row of Squares
       if ( (((middleH - 150) <= hcount AND hcount <= (middleH - 120)) OR ((middleH - 105) <= hcount AND hcount <= (middleH - 75)) OR ((middleH - 60) <= hcount AND hcount <= (middleH - 30)) OR ((middleH - 15) <= hcount AND hcount <= (middleH + 15)) OR ((middleH + 30) <= hcount AND hcount <= (middleH + 60)) OR ((middleH + 75) <= hcount AND hcount <= (middleH + 105)) OR ((middleH + 120) <= hcount AND hcount <= (middleH + 150))) AND (middleV <= vcount AND vcount <= middleV + 30)) then
           red_data <= COLORW_RED;
           green_data <= COLORW_GREEN;
@@ -163,6 +193,7 @@ begin
           blue_data <= (others => '0');
       end if;
       
+      -- Second Row of Squares
       if ( (((middleH - 150) <= hcount AND hcount <= (middleH - 120)) OR ((middleH - 105) <= hcount AND hcount <= (middleH - 75)) OR ((middleH - 60) <= hcount AND hcount <= (middleH - 30)) OR ((middleH - 15) <= hcount AND hcount <= (middleH + 15)) OR ((middleH + 30) <= hcount AND hcount <= (middleH + 60)) OR ((middleH + 75) <= hcount AND hcount <= (middleH + 105)) OR ((middleH + 120) <= hcount AND hcount <= (middleH + 150))) AND (middleV + 60 <= vcount AND vcount <= middleV + 90)) then
           red_data <= COLORW_RED;
           green_data <= COLORW_GREEN;
@@ -173,4 +204,9 @@ begin
           blue_data <= (others => '0');
       end if;
       
+      -- First Row of Circles
+      
 end process;
+     
+end Behavioral;
+
